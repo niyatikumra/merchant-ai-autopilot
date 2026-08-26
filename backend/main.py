@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from routes.transactions import router as transaction_router
-
+from routes.merchant import router as merchant_router
 app = FastAPI()
 
 
@@ -10,3 +10,4 @@ def home():
 
 
 app.include_router(transaction_router)
+app.include_router(merchant_router)
