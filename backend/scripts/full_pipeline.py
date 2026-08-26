@@ -18,14 +18,13 @@ from services.risk_engine import calculate_risk_score
 from services.money_leak import calculate_money_at_risk
 from services.policy_engine import decide_action
 from services.autopilot import execute_action
+from services.risk_explanation import explain_risk
 
 
 df = pd.read_csv("data/transactions.csv")
 
-# 1. Features
 features = build_features(df)
 
-# 2. ML
 model_features = features.drop(columns=["customer_id"])
 
 model = train_anomaly_model(model_features)
@@ -37,7 +36,6 @@ predictions = predict_anomalies(
 
 features["anomaly"] = predictions
 
-# 3. Graph
 graph = build_fraud_graph(df)
 
 
@@ -77,13 +75,16 @@ for customer in [
             edge.get("weight", 0)
         )
 
-    # Risk
     risk = calculate_risk_score(
         anomaly,
         max_weight
     )
 
-    # Customer transactions
+    risk_reasons = explain_risk(
+        anomaly,
+        max_weight
+    )
+
     customer_transactions = df[
         df["customer_id"] == customer
     ]
@@ -92,16 +93,13 @@ for customer in [
         ["amount"]
     ].to_dict("records")
 
-    # Money at risk
     money_at_risk = calculate_money_at_risk(
         transactions,
         risk
     )
 
-    # Merchant policy
     action = decide_action(risk)
 
-    # Autopilot
     result = execute_action(
         action,
         customer
@@ -109,6 +107,11 @@ for customer in [
 
     print("Customer:", customer)
     print("Risk Score:", risk)
+
+    print("Risk Reasons:")
+    for reason in risk_reasons:
+        print(" -", reason)
+
     print("Money At Risk: ₹", money_at_risk)
     print("Action:", result["action"])
     print("Message:", result["message"])
